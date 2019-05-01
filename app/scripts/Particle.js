@@ -34,8 +34,12 @@ Particle.prototype.run = function(p5) {
 
 // Method to update position
 Particle.prototype.update = function(){
+
+  if (this.lifespan <= 0) {
+    return
+  }
   this.velocity.add(this.acceleration);
-  this.velocity.limit(5)
+  this.velocity.limit(4 )
   
   if (this.accelerations.length > this.steps) {
     this.velocity.add(this.accelerations[this.steps])
@@ -71,6 +75,10 @@ Particle.prototype.eatFood = function() {
   this.maxDots += 1;
 }
 
+Particle.prototype.kill = function() {
+  this.lifespan = 0;
+}
+
 // Method to display
 Particle.prototype.display = function(p5) {
   p5.stroke(Math.floor(this.color[0]), Math.floor(this.color[1]), Math.floor(this.color[2]));
@@ -92,5 +100,6 @@ Particle.prototype.isDead = function(){
 };
 
 Particle.prototype.calculateFitness = function() {
-  return this.hasEaten ? (this.lifespan / 2) + this.accelerations.length - this.steps : 0
+  return this.hasEaten ? (this.lifespan )  - this.steps : 0
+  // (this.lifespan > 0 ? this.lifespan - this.steps : 0)
 }

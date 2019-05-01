@@ -7,6 +7,7 @@ let sketch = function(p) {
     p.createCanvas(1200, 700)
     system = new ParticleSystem( p.createVector(p.width / 2 , p.height / 2))
     system.createFood(p, 50)
+    system.createBombs(p, 10)
     p.background(51);
 
     for(var i = 0; i < INITIAL_PARTICLES; i++) {
