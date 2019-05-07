@@ -2,7 +2,7 @@
 // A simple Particle class
 let Particle = function(position, genes) {
   this.adn = new ADN(genes)
-  this.hasEaten = false
+  this.eaten = 0
   this.points = []
   this.maxDots = 3
   
@@ -22,7 +22,7 @@ Particle.prototype.setPosition = function(pos) {
 Particle.prototype.reset = function(pos) {
   this.lifespan = this.adn.findGene('lifespan').value
   this.steps = 0
-  this.hasEaten = false
+  this.eaten = 0
   this.maxDots = 3
   this.points = []
 }
@@ -70,9 +70,9 @@ Particle.prototype.update = function(){
 };
 
 Particle.prototype.eatFood = function() {
-  this.hasEaten = true
   this.lifespan += 200;
   this.maxDots += 1;
+  this.eaten += 1
 }
 
 Particle.prototype.kill = function() {
@@ -81,25 +81,30 @@ Particle.prototype.kill = function() {
 
 // Method to display
 Particle.prototype.display = function(p5) {
-  p5.stroke(Math.floor(this.color[0]), Math.floor(this.color[1]), Math.floor(this.color[2]));
-  p5.strokeWeight(1);
-  p5.fill(Math.floor(this.color[0]), Math.floor(this.color[1]), Math.floor(this.color[2]));
-  p5.ellipse(this.position.x, this.position.y, 12, 12);
-  p5.textSize(10);
-  p5.text(this.familyName, this.position.x, this.position.y);
-
-  p5.fill(255,255,255)
-  this.points.forEach(point => {
-    p5.ellipse(point.x, point.y, 2, 2)
-  })
+  if (!this.isDead()) {
+    p5.stroke(Math.floor(this.color[0]), Math.floor(this.color[1]), Math.floor(this.color[2]));
+    p5.strokeWeight(1);
+    p5.fill(Math.floor(this.color[0]), Math.floor(this.color[1]), Math.floor(this.color[2]));
+    p5.ellipse(this.position.x, this.position.y, 12, 12);
+    p5.textSize(10);
+    p5.text(this.familyName, this.position.x, this.position.y);
+  
+    p5.fill(255,255,255)
+    this.points.forEach(point => {
+      p5.ellipse(point.x, point.y, 2, 2)
+    })
+  } else {
+    p5.stroke(44, 44, 44)
+    p5.fill(13,13,13)
+    p5.ellipse(this.position.x, this.position.y, 8, 8)
+  }
 };
 
 // Is the particle still useful?
 Particle.prototype.isDead = function(){
-  return this.lifespan < 0;
+  return this.lifespan <= 0;
 };
 
 Particle.prototype.calculateFitness = function() {
-  return this.hasEaten ? (this.lifespan )  - this.steps : 0
-  // (this.lifespan > 0 ? this.lifespan - this.steps : 0)
+  return  (this.eaten * 1000 - this.steps ) / 1000
 }

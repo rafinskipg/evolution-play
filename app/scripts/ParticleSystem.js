@@ -1,4 +1,4 @@
-const iterationTime = 200
+const MAX_ITERATION_TIME = 12000
 
 function makeid(length) {
   var result = ''
@@ -29,7 +29,7 @@ let ParticleSystem = function(position) {
 
   // Stats
   this.stats = {
-    medianLifespan : 0,
+    medianLifespan: 0,
     dominantFamily: ''
   }
 }
@@ -81,9 +81,7 @@ ParticleSystem.prototype.addParticle = function(p5) {
     p5.random(0, 1),
     function(value) {
       const shouldMutate = Math.random() * 100 < 0.1
-      return shouldMutate
-        ? p5.random(200, 500)
-        : value
+      return shouldMutate ? p5.random(200, 500) : value
     }
   )
   const color = new Gene(
@@ -105,62 +103,60 @@ ParticleSystem.prototype.addParticle = function(p5) {
 }
 
 ParticleSystem.prototype.run = function(p5) {
-  if (this.iterationTime < iterationTime) {
+  if (this.iterationTime < MAX_ITERATION_TIME && !this.finishedIteration) {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       let p = this.particles[i]
-      p.run(p5)
 
-      // Check if food collides
-      // TODO: can use better algorithm, like quad tree
-      for (let j = this.food.length - 1; j >= 0; j--) {
-        let f = this.food[j]
+      if (!p.isDead()) {
+        p.run(p5)
 
-        let hit = p5.collideCircleCircle(
-          f.x,
-          f.y,
-          20,
-          p.position.x,
-          p.position.y,
-          20
-        )
-        if (hit) {
-          console.log('Eat food')
-          p.eatFood()
-          this.food.splice(j, 1)
+        // Check if food collides
+        // TODO: can use better algorithm, like quad tree
+        for (let j = this.food.length - 1; j >= 0; j--) {
+          let f = this.food[j]
+
+          let hit = p5.collideCircleCircle(
+            f.x,
+            f.y,
+            20,
+            p.position.x,
+            p.position.y,
+            20
+          )
+          if (hit) {
+            p.eatFood()
+            this.food.splice(j, 1)
+          }
         }
-      }
 
-      // Check if bomb collides
-      // TODO: can use better algorithm, like quad tree
-      for (let j = this.bombs.length - 1; j >= 0; j--) {
-        let f = this.bombs[j]
+        // Check if bomb collides
+        // TODO: can use better algorithm, like quad tree
+        for (let j = this.bombs.length - 1; j >= 0; j--) {
+          let f = this.bombs[j]
 
-        let hit = p5.collideCircleCircle(
-          f.x,
-          f.y,
-          20,
-          p.position.x,
-          p.position.y,
-          20
-        )
-        if (hit) {
-          p.kill()
+          let hit = p5.collideCircleCircle(
+            f.x,
+            f.y,
+            20,
+            p.position.x,
+            p.position.y,
+            20
+          )
+          if (hit) {
+            p.kill()
+          }
         }
+      } else {
+        p.display(p5)
       }
-
-      // if (p.isDead()) {
-      //   this.particles.splice(i, 1)
-      // }
     }
 
     this.iterationTime++
 
-    if (this.iterationTime === iterationTime) {
-      console.log(
-        'Iteration finished',
-        this.particles.length,
-        'particles alive'
-      )
+    const allParticlesDead = this.particles.filter(p => !p.isDead()).length === 0
+    
+    if (this.iterationTime === MAX_ITERATION_TIME || allParticlesDead) {
+      console.log('Iteration finished')
       this.finishedIteration = true
     }
   }
@@ -168,26 +164,30 @@ ParticleSystem.prototype.run = function(p5) {
   this.renderFood(p5)
   this.renderBombs(p5)
 
+  const particlesAlive = this.particles.filter(p => !p.isDead()).length
+
   p5.textSize(20)
   p5.text('Generation ' + this.generation, 10, 20)
-
-  p5.text('Medianlifespan ' + this.stats.medianLifespan, 10, 40)
-  p5.text('Dominantfamily ' + this.stats.dominantFamily, 10, 60)
+  p5.text('Median lifespan ' + this.stats.medianLifespan, 10, 40)
+  p5.text('Dominant family ' + this.stats.dominantFamily, 10, 60)
+  p5.text('Particles alive ' + particlesAlive, 10, 80)
 }
 
 ParticleSystem.prototype.renderFood = function(p5) {
+  p5.fill(144, 144, 144)
+  p5.stroke(255, 204, 0)
   for (let i = this.food.length - 1; i >= 0; i--) {
     let f = this.food[i]
-    p5.stroke(255, 204, 0)
     p5.strokeWeight(4)
     p5.rect(f.x, f.y, 10, 10)
   }
 }
 
 ParticleSystem.prototype.renderBombs = function(p5) {
+  p5.fill(98, 98, 98)
+  p5.stroke(155, 155, 0)
   for (let i = this.bombs.length - 1; i >= 0; i--) {
     let f = this.bombs[i]
-    p5.stroke(155, 155, 0)
     p5.strokeWeight(1)
     p5.rect(f.x, f.y, 10, 10)
   }
@@ -215,7 +215,6 @@ ParticleSystem.prototype.newIteration = function(position, p5) {
 
   // Generate stats
   this.generateStats()
-  
 }
 
 ParticleSystem.prototype.newGeneration = function(p5) {
@@ -258,18 +257,18 @@ ParticleSystem.prototype.newGeneration = function(p5) {
   const difference = this.particles.length - newBorn.length
   const remainingKids = []
 
-  for(var i = 0; i < difference; i++) {
-    const randomParent = particlesSorted[Math.floor(Math.random() * particlesSorted.length)]
+  for (var i = 0; i < difference; i++) {
+    const randomParent =
+      particlesSorted[Math.floor(Math.random() * particlesSorted.length)]
     const newGenes = randomParent.adn.reproduce(p5)
-    
+
     remainingKids.push(new Particle(randomParent.position.copy(), newGenes))
-    
   }
 
   console.log('New born', newBorn.length)
 
   // const newGeneration = particlesSorted.concat(newBorn)
-   const newGeneration = newBorn.concat(remainingKids)
+  const newGeneration = newBorn.concat(remainingKids)
 
   console.log(newGeneration.length)
 
@@ -294,55 +293,26 @@ ParticleSystem.prototype.generateStats = function() {
   const familytree = {}
 
   this.particles.forEach(p => {
-    if(!familytree[p.familyName]) {
+    if (!familytree[p.familyName]) {
       familytree[p.familyName] = 1
     } else {
       familytree[p.familyName] += 1
     }
   })
 
-  const dominantFamily = Object.keys(familytree).map((k) => {
-    return {
-      name: k,
-      amount: familytree[k]
-    }
-  }).sort((a, b) => {
-    return a.amount > b.amount ? -1 : 1
-  })[0].name
+  const dominantFamily = Object.keys(familytree)
+    .map(k => {
+      return {
+        name: k,
+        amount: familytree[k]
+      }
+    })
+    .sort((a, b) => {
+      return a.amount > b.amount ? -1 : 1
+    })[0].name
 
   this.stats = {
     medianLifespan,
     dominantFamily
   }
 }
-
-// ParticleSystem.prototype.generation = function(p5) {
-//   // Get the best particles, kill the worst
-//   const withSomeFitness = this.particles.filter(i => i.calculateFitness() > 0)
-//   const particlesSorted = withSomeFitness.sort((a, b) => a.calculateFitness() > b.calculateFitness() ? -1 : 1)
-//   const halfLength = Math.ceil(particlesSorted.length / 2);
-
-//   const leftSide = particlesSorted.slice(0, halfLength);
-//   const rightSide = particlesSorted.slice( halfLength, particlesSorted.length);
-//   const newBorn = leftSide.map(p => {
-//     const newGenes = p.adn.reproduce(p5)
-//     return new Particle(p.position.copy(), newGenes)
-//   })
-
-//   console.log('New born', newBorn.length)
-
-//   const newGeneration = leftSide.concat(newBorn)
-
-//   console.log(newGeneration.length)
-
-//   // Update the origin position
-//   this.particles = newGeneration.map(n => {
-//     n.setPosition(this.position.copy())
-//     n.reset()
-//     return n
-//   })
-
-//   console.log('New generation with: ', this.particles.length)
-
-//   // Store stats
-// }

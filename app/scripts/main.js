@@ -31,5 +31,3 @@ let sketch = function(p) {
 }
 
 const sk = new p5(sketch, window.document.getElementById('canvas'))
-
-window.document.getElementById('newgen').addEventListener('click', () => { sk.newGeneration() })
