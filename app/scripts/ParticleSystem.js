@@ -81,7 +81,8 @@ ParticleSystem.prototype.addParticle = function(p5) {
     p5.random(0, 1),
     function(value) {
       const shouldMutate = Math.random() * 100 < 0.1
-      return shouldMutate ? p5.random(200, 500) : value
+      const mutationValue = Math.random() > 0.5 ? Math.random() * value: -(Math.random() * value)
+      return shouldMutate ? mutationValue + value : value
     }
   )
   const color = new Gene(
@@ -95,9 +96,15 @@ ParticleSystem.prototype.addParticle = function(p5) {
         : value
     }
   )
+  const vision = new Gene('vision', p5.random(0, 150), p5.random(0, 1), function (value) {
+    const shouldMutate = Math.random() * 100 < 0.1;
+    const mutationValue = Math.random() > 0.5 ? Math.random() * value: -(Math.random() * value)
+    
+    return shouldMutate ? mutationValue + value  : value;
+  });
   const familyName = new Gene('familyName', makeid(5), p5.random(0, 1))
 
-  const genes = [accelerations, velocity, lifespan, color, familyName]
+  const genes = [accelerations, velocity, lifespan, color, familyName, vision]
 
   this.particles.push(new Particle(this.origin, genes))
 }
@@ -115,17 +122,30 @@ ParticleSystem.prototype.run = function(p5) {
         for (let j = this.food.length - 1; j >= 0; j--) {
           let f = this.food[j]
 
+          let vision = p5.collideCircleCircle(
+            f.x,
+            f.y,
+            15,
+            p.position.x,
+            p.position.y,
+            10 + p.vision
+          )
+
           let hit = p5.collideCircleCircle(
             f.x,
             f.y,
-            20,
+            15,
             p.position.x,
             p.position.y,
-            20
+            10
           )
           if (hit) {
             p.eatFood()
             this.food.splice(j, 1)
+          }
+
+          if (vision) {
+            p.steerTowardsFood( f)
           }
         }
 
@@ -137,10 +157,10 @@ ParticleSystem.prototype.run = function(p5) {
           let hit = p5.collideCircleCircle(
             f.x,
             f.y,
-            20,
+            5,
             p.position.x,
             p.position.y,
-            20
+            10
           )
           if (hit) {
             p.kill()
@@ -155,7 +175,7 @@ ParticleSystem.prototype.run = function(p5) {
 
     const allParticlesDead = this.particles.filter(p => !p.isDead()).length === 0
     
-    if (this.iterationTime === MAX_ITERATION_TIME || allParticlesDead) {
+    if (this.iterationTime === MAX_ITERATION_TIME || allParticlesDead || this.food.length === 0) {
       console.log('Iteration finished')
       this.finishedIteration = true
     }
@@ -255,9 +275,10 @@ ParticleSystem.prototype.newGeneration = function(p5) {
 
   // Generate kids from the remaining units with fitness in a random way
   const difference = this.particles.length - newBorn.length
+  const totalNewKids = difference <= 5 ? difference : 5
   const remainingKids = []
 
-  for (var i = 0; i < difference; i++) {
+  for (var i = 0; i < totalNewKids; i++) {
     const randomParent =
       particlesSorted[Math.floor(Math.random() * particlesSorted.length)]
     const newGenes = randomParent.adn.reproduce(p5)
